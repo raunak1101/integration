@@ -1,363 +1,478 @@
-#include <omp.h>
-#include <algorithm>
-#include <cmath>
-#include <fstream>
+// Red Black Tree implementation in C++
+// Author: Algorithm Tutor
+// Tutorial URL: https://algorithmtutor.com/Data-Structures/Tree/Red-Black-Trees/
+
 #include <iostream>
-#include <vector>
 
 using namespace std;
 
-class Point
-{
-private:
-    int pointId, clusterId;
-    int dimensions;
-    vector<double> values;
-
-    vector<double> lineToVec(string &line)
-    {
-        vector<double> values;
-        string tmp = "";
-
-        for (int i = 0; i < (int)line.length(); i++)
-        {
-            if ((48 <= int(line[i]) && int(line[i])  <= 57) || line[i] == '.' || line[i] == '+' || line[i] == '-' || line[i] == 'e')
-            {
-                tmp += line[i];
-            }
-            else if (tmp.length() > 0)
-            {
-
-                values.push_back(stod(tmp));
-                tmp = "";
-            }
-        }
-        if (tmp.length() > 0)
-        {
-            values.push_back(stod(tmp));
-            tmp = "";
-        }
-
-        return values;
-    }
-
-public:
-    Point(int id, string line)
-    {
-        pointId = id;
-        values = lineToVec(line);
-        dimensions = values.size();
-        clusterId = 0; // Initially not assigned to any cluster
-    }
-
-    int getDimensions() { return dimensions; }
-
-    int getCluster() { return clusterId; }
-
-    int getID() { return pointId; }
-
-    void setCluster(int val) { clusterId = val; }
-
-    double getVal(int pos) { return values[pos]; }
+// data structure that represents a node in the tree
+struct Node {
+	int data; // holds the key
+	Node *parent; // pointer to the parent
+	Node *left; // pointer to left child
+	Node *right; // pointer to right child
+	int color; // 1 -> Red, 0 -> Black
 };
 
-class Cluster
-{
+typedef Node *NodePtr;
+
+// class RBTree implements the operations in Red Black Tree
+class RBTree {
 private:
-    int clusterId;
-    vector<double> centroid;
-    vector<Point> points;
+	NodePtr root;
+	NodePtr TNULL;
 
-public:
-    Cluster(int clusterId, Point centroid)
-    {
-        this->clusterId = clusterId;
-        for (int i = 0; i < centroid.getDimensions(); i++)
-        {
-            this->centroid.push_back(centroid.getVal(i));
-        }
-        this->addPoint(centroid);
-    }
+	// initializes the nodes with appropirate values
+	// all the pointers are set to point to the null pointer
+	void initializeNULLNode(NodePtr node, NodePtr parent) {
+		node->data = 0;
+		node->parent = parent;
+		node->left = nullptr;
+		node->right = nullptr;
+		node->color = 0;
+	}
 
-    void addPoint(Point p)
-    {
-        p.setCluster(this->clusterId);
-        points.push_back(p);
-    }
+	void preOrderHelper(NodePtr node) {
+		if (node != TNULL) {
+			cout<<node->data<<" ";
+			preOrderHelper(node->left);
+			preOrderHelper(node->right);
+		} 
+	}
 
-    bool removePoint(int pointId)
-    {
-        int size = points.size();
+	void inOrderHelper(NodePtr node) {
+		if (node != TNULL) {
+			inOrderHelper(node->left);
+			cout<<node->data<<" ";
+			inOrderHelper(node->right);
+		} 
+	}
 
-        for (int i = 0; i < size; i++)
-        {
-            if (points[i].getID() == pointId)
-            {
-                points.erase(points.begin() + i);
-                return true;
-            }
-        }
-        return false;
-    }
+	void postOrderHelper(NodePtr node) {
+		if (node != TNULL) {
+			postOrderHelper(node->left);
+			postOrderHelper(node->right);
+			cout<<node->data<<" ";
+		} 
+	}
 
-    void removeAllPoints() { points.clear(); }
+	NodePtr searchTreeHelper(NodePtr node, int key) {
+		if (node == TNULL || key == node->data) {
+			return node;
+		}
 
-    int getId() { return clusterId; }
+		if (key < node->data) {
+			return searchTreeHelper(node->left, key);
+		} 
+		return searchTreeHelper(node->right, key);
+	}
 
-    Point getPoint(int pos) { return points[pos]; }
+	// fix the rb tree modified by the delete operation
+	void fixDelete(NodePtr x) {
+		NodePtr s;
+		while (x != root && x->color == 0) {
+			if (x == x->parent->left) {
+				s = x->parent->right;
+				if (s->color == 1) {
+					// case 3.1
+					s->color = 0;
+					x->parent->color = 1;
+					leftRotate(x->parent);
+					s = x->parent->right;
+				}
 
-    int getSize() { return points.size(); }
+				if (s->left->color == 0 && s->right->color == 0) {
+					// case 3.2
+					s->color = 1;
+					x = x->parent;
+				} else {
+					if (s->right->color == 0) {
+						// case 3.3
+						s->left->color = 0;
+						s->color = 1;
+						rightRotate(s);
+						s = x->parent->right;
+					} 
 
-    double getCentroidByPos(int pos) { return centroid[pos]; }
+					// case 3.4
+					s->color = x->parent->color;
+					x->parent->color = 0;
+					s->right->color = 0;
+					leftRotate(x->parent);
+					x = root;
+				}
+			} else {
+				s = x->parent->left;
+				if (s->color == 1) {
+					// case 3.1
+					s->color = 0;
+					x->parent->color = 1;
+					rightRotate(x->parent);
+					s = x->parent->left;
+				}
 
-    void setCentroidByPos(int pos, double val) { this->centroid[pos] = val; }
-};
+				if (s->right->color == 0 && s->right->color == 0) {
+					// case 3.2
+					s->color = 1;
+					x = x->parent;
+				} else {
+					if (s->left->color == 0) {
+						// case 3.3
+						s->right->color = 0;
+						s->color = 1;
+						leftRotate(s);
+						s = x->parent->left;
+					} 
 
-class KMeans
-{
-private:
-    int K, iters, dimensions, total_points;
-    vector<Cluster> clusters;
-    string output_dir;
+					// case 3.4
+					s->color = x->parent->color;
+					x->parent->color = 0;
+					s->left->color = 0;
+					rightRotate(x->parent);
+					x = root;
+				}
+			} 
+		}
+		x->color = 0;
+	}
 
-    void clearClusters()
-    {
-        for (int i = 0; i < K; i++)
-        {
-            clusters[i].removeAllPoints();
-        }
-    }
 
-    int getNearestClusterId(Point point)
-    {
-        double sum = 0.0, min_dist;
-        int NearestClusterId;
-        if(dimensions==1) {
-            min_dist = abs(clusters[0].getCentroidByPos(0) - point.getVal(0));
-        }	
-        else 
-        {
-          for (int i = 0; i < dimensions; i++)
-          {
-             sum += pow(clusters[0].getCentroidByPos(i) - point.getVal(i), 2.0);
-             // sum += abs(clusters[0].getCentroidByPos(i) - point.getVal(i));
-          }
-          min_dist = sqrt(sum);
-        }
-        NearestClusterId = clusters[0].getId();
+	void rbTransplant(NodePtr u, NodePtr v){
+		if (u->parent == nullptr) {
+			root = v;
+		} else if (u == u->parent->left){
+			u->parent->left = v;
+		} else {
+			u->parent->right = v;
+		}
+		v->parent = u->parent;
+	}
 
-        for (int i = 1; i < K; i++)
-        {
-            double dist;
-            sum = 0.0;
+	void deleteNodeHelper(NodePtr node, int key) {
+		// find the node containing key
+		NodePtr z = TNULL;
+		NodePtr x, y;
+		while (node != TNULL){
+			if (node->data == key) {
+				z = node;
+			}
+
+			if (node->data <= key) {
+				node = node->right;
+			} else {
+				node = node->left;
+			}
+		}
+
+		if (z == TNULL) {
+			cout<<"Couldn't find key in the tree"<<endl;
+			return;
+		} 
+
+		y = z;
+		int y_original_color = y->color;
+		if (z->left == TNULL) {
+			x = z->right;
+			rbTransplant(z, z->right);
+		} else if (z->right == TNULL) {
+			x = z->left;
+			rbTransplant(z, z->left);
+		} else {
+			y = minimum(z->right);
+			y_original_color = y->color;
+			x = y->right;
+			if (y->parent == z) {
+				x->parent = y;
+			} else {
+				rbTransplant(y, y->right);
+				y->right = z->right;
+				y->right->parent = y;
+			}
+
+			rbTransplant(z, y);
+			y->left = z->left;
+			y->left->parent = y;
+			y->color = z->color;
+		}
+		delete z;
+		if (y_original_color == 0){
+			fixDelete(x);
+		}
+	}
+	
+	// fix the red-black tree
+	void fixInsert(NodePtr k){
+		NodePtr u;
+		while (k->parent->color == 1) {
+			if (k->parent == k->parent->parent->right) {
+				u = k->parent->parent->left; // uncle
+				if (u->color == 1) {
+					// case 3.1
+					u->color = 0;
+					k->parent->color = 0;
+					k->parent->parent->color = 1;
+					k = k->parent->parent;
+				} else {
+					if (k == k->parent->left) {
+						// case 3.2.2
+						k = k->parent;
+						rightRotate(k);
+					}
+					// case 3.2.1
+					k->parent->color = 0;
+					k->parent->parent->color = 1;
+					leftRotate(k->parent->parent);
+				}
+			} else {
+				u = k->parent->parent->right; // uncle
+
+				if (u->color == 1) {
+					// mirror case 3.1
+					u->color = 0;
+					k->parent->color = 0;
+					k->parent->parent->color = 1;
+					k = k->parent->parent;	
+				} else {
+					if (k == k->parent->right) {
+						// mirror case 3.2.2
+						k = k->parent;
+						leftRotate(k);
+					}
+					// mirror case 3.2.1
+					k->parent->color = 0;
+					k->parent->parent->color = 1;
+					rightRotate(k->parent->parent);
+				}
+			}
+			if (k == root) {
+				break;
+			}
+		}
+		root->color = 0;
+	}
+
+	void printHelper(NodePtr root, string indent, bool last) {
+		// print the tree structure on the screen
+	   	if (root != TNULL) {
+		   cout<<indent;
+		   if (last) {
+		      cout<<"R----";
+		      indent += "     ";
+		   } else {
+		      cout<<"L----";
+		      indent += "|    ";
+		   }
             
-            if(dimensions==1) {
-                  dist = abs(clusters[i].getCentroidByPos(0) - point.getVal(0));
-            } 
-            else {
-              for (int j = 0; j < dimensions; j++)
-              {
-                  sum += pow(clusters[i].getCentroidByPos(j) - point.getVal(j), 2.0);
-                  // sum += abs(clusters[i].getCentroidByPos(j) - point.getVal(j));
-              }
-
-              dist = sqrt(sum);
-              // dist = sum;
-            }
-            if (dist < min_dist)
-            {
-                min_dist = dist;
-                NearestClusterId = clusters[i].getId();
-            }
-        }
-
-        return NearestClusterId;
-    }
+           string sColor = root->color?"RED":"BLACK";
+		   cout<<root->data<<"("<<sColor<<")"<<endl;
+		   printHelper(root->left, indent, false);
+		   printHelper(root->right, indent, true);
+		}
+		// cout<<root->left->data<<endl;
+	}
 
 public:
-    KMeans(int K, int iterations, string output_dir)
-    {
-        this->K = K;
-        this->iters = iterations;
-        this->output_dir = output_dir;
-    }
+	RBTree() {
+		TNULL = new Node;
+		TNULL->color = 0;
+		TNULL->left = nullptr;
+		TNULL->right = nullptr;
+		root = TNULL;
+	}
 
-    void run(vector<Point> &all_points)
-    {
-        total_points = all_points.size();
-        dimensions = all_points[0].getDimensions();
+	// Pre-Order traversal
+	// Node->Left Subtree->Right Subtree
+	void preorder() {
+		preOrderHelper(this->root);
+	}
 
-        // Initializing Clusters
-        vector<int> used_pointIds;
+	// In-Order traversal
+	// Left Subtree -> Node -> Right Subtree
+	void inorder() {
+		inOrderHelper(this->root);
+	}
 
-        for (int i = 1; i <= K; i++)
-        {
-            while (true)
-            {
-                int index = rand() % total_points;
+	// Post-Order traversal
+	// Left Subtree -> Right Subtree -> Node
+	void postorder() {
+		postOrderHelper(this->root);
+	}
 
-                if (find(used_pointIds.begin(), used_pointIds.end(), index) ==
-                    used_pointIds.end())
-                {
-                    used_pointIds.push_back(index);
-                    all_points[index].setCluster(i);
-                    Cluster cluster(i, all_points[index]);
-                    clusters.push_back(cluster);
-                    break;
-                }
-            }
-        }
-        cout << "Clusters initialized = " << clusters.size() << endl
-             << endl;
+	// search the tree for the key k
+	// and return the corresponding node
+	NodePtr searchTree(int k) {
+		return searchTreeHelper(this->root, k);
+	}
 
-        cout << "Running K-Means Clustering.." << endl;
+	// find the node with the minimum key
+	NodePtr minimum(NodePtr node) {
+		while (node->left != TNULL) {
+			node = node->left;
+		}
+		return node;
+	}
 
-        int iter = 1;
-        while (true)
-        {
-            cout << "Iter - " << iter << "/" << iters << endl;
-            bool done = true;
+	// find the node with the maximum key
+	NodePtr maximum(NodePtr node) {
+		while (node->right != TNULL) {
+			node = node->right;
+		}
+		return node;
+	}
 
-            // Add all points to their nearest cluster
-            #pragma omp parallel for reduction(&&: done) num_threads(16)
-            for (int i = 0; i < total_points; i++)
-            {
-                int currentClusterId = all_points[i].getCluster();
-                int nearestClusterId = getNearestClusterId(all_points[i]);
+	// find the successor of a given node
+	NodePtr successor(NodePtr x) {
+		// if the right subtree is not null,
+		// the successor is the leftmost node in the
+		// right subtree
+		if (x->right != TNULL) {
+			return minimum(x->right);
+		}
 
-                if (currentClusterId != nearestClusterId)
-                {
-                    all_points[i].setCluster(nearestClusterId);
-                    done = false;
-                }
-            }
+		// else it is the lowest ancestor of x whose
+		// left child is also an ancestor of x.
+		NodePtr y = x->parent;
+		while (y != TNULL && x == y->right) {
+			x = y;
+			y = y->parent;
+		}
+		return y;
+	}
 
-            // clear all existing clusters
-            clearClusters();
+	// find the predecessor of a given node
+	NodePtr predecessor(NodePtr x) {
+		// if the left subtree is not null,
+		// the predecessor is the rightmost node in the 
+		// left subtree
+		if (x->left != TNULL) {
+			return maximum(x->left);
+		}
 
-            // reassign points to their new clusters
-            for (int i = 0; i < total_points; i++)
-            {
-                // cluster index is ID-1
-                clusters[all_points[i].getCluster() - 1].addPoint(all_points[i]);
-            }
+		NodePtr y = x->parent;
+		while (y != TNULL && x == y->left) {
+			x = y;
+			y = y->parent;
+		}
 
-            // Recalculating the center of each cluster
-            for (int i = 0; i < K; i++)
-            {
-                int ClusterSize = clusters[i].getSize();
+		return y;
+	}
 
-                for (int j = 0; j < dimensions; j++)
-                {
-                    double sum = 0.0;
-                    if (ClusterSize > 0)
-                    {
-                        #pragma omp parallel for reduction(+: sum) num_threads(16)
-                        for (int p = 0; p < ClusterSize; p++)
-                        {
-                            sum += clusters[i].getPoint(p).getVal(j);
-                        }
-                        clusters[i].setCentroidByPos(j, sum / ClusterSize);
-                    }
-                }
-            }
+	// rotate left at node x
+	void leftRotate(NodePtr x) {
+		NodePtr y = x->right;
+		x->right = y->left;
+		if (y->left != TNULL) {
+			y->left->parent = x;
+		}
+		y->parent = x->parent;
+		if (x->parent == nullptr) {
+			this->root = y;
+		} else if (x == x->parent->left) {
+			x->parent->left = y;
+		} else {
+			x->parent->right = y;
+		}
+		y->left = x;
+		x->parent = y;
+	}
 
-            if (done || iter >= iters)
-            {
-                cout << "Clustering completed in iteration : " << iter << endl
-                     << endl;
-                break;
-            }
-            iter++;
-        }
+	// rotate right at node x
+	void rightRotate(NodePtr x) {
+		NodePtr y = x->left;
+		x->left = y->right;
+		if (y->right != TNULL) {
+			y->right->parent = x;
+		}
+		y->parent = x->parent;
+		if (x->parent == nullptr) {
+			this->root = y;
+		} else if (x == x->parent->right) {
+			x->parent->right = y;
+		} else {
+			x->parent->left = y;
+		}
+		y->right = x;
+		x->parent = y;
+	}
 
-        ofstream pointsFile;
-        pointsFile.open(output_dir + "/" + to_string(K) + "-points.txt", ios::out);
+	// insert the key to the tree in its appropriate position
+	// and fix the tree
+	void insert(int key) {
+		// Ordinary Binary Search Insertion
+		NodePtr node = new Node;
+		node->parent = nullptr;
+		node->data = key;
+		node->left = TNULL;
+		node->right = TNULL;
+		node->color = 1; // new node must be red
 
-        for (int i = 0; i < total_points; i++)
-        {
-            pointsFile << all_points[i].getCluster() << endl;
-        }
+		NodePtr y = nullptr;
+		NodePtr x = this->root;
 
-        pointsFile.close();
+		while (x != TNULL) {
+			y = x;
+			if (node->data < x->data) {
+				x = x->left;
+			} else {
+				x = x->right;
+			}
+		}
 
-        // Write cluster centers to file
-        ofstream outfile;
-        outfile.open(output_dir + "/" + to_string(K) + "-clusters.txt");
-        if (outfile.is_open())
-        {
-            for (int i = 0; i < K; i++)
-            {
-                cout << "Cluster " << clusters[i].getId() << " centroid : ";
-                for (int j = 0; j < dimensions; j++)
-                {
-                    cout << clusters[i].getCentroidByPos(j) << " ";    // Output to console
-                    outfile << clusters[i].getCentroidByPos(j) << " "; // Output to file
-                }
-                cout << endl;
-                outfile << endl;
-            }
-            outfile.close();
-        }
-        else
-        {
-            cout << "Error: Unable to write to clusters.txt";
-        }
-    }
+		// y is parent of x
+		node->parent = y;
+		if (y == nullptr) {
+			root = node;
+		} else if (node->data < y->data) {
+			y->left = node;
+		} else {
+			y->right = node;
+		}
+
+		// if new node is a root node, simply return
+		if (node->parent == nullptr){
+			node->color = 0;
+			return;
+		}
+
+		// if the grandparent is null, simply return
+		if (node->parent->parent == nullptr) {
+			return;
+		}
+
+		// Fix the tree
+		fixInsert(node);
+	}
+
+	NodePtr getRoot(){
+		return this->root;
+	}
+
+	// delete the node from the tree
+	void deleteNode(int data) {
+		deleteNodeHelper(this->root, data);
+	}
+
+	// print the tree structure on the screen
+	void prettyPrint() {
+	    if (root) {
+    		printHelper(this->root, "", true);
+	    }
+	}
+
 };
 
-int main(int argc, char **argv)
-{
-    // Need 3 arguments (except filename) to run, else exit
-    if (argc != 4)
-    {
-        cout << "Error: command-line argument count mismatch. \n ./kmeans <INPUT> <K> <OUT-DIR>" << endl;
-        return 1;
-    }
-
-    string output_dir = argv[3];
-
-    // Fetching number of clusters
-    int K = atoi(argv[2]);
-
-    // Open file for fetching points
-    string filename = argv[1];
-    ifstream infile(filename.c_str());
-
-    if (!infile.is_open())
-    {
-        cout << "Error: Failed to open file." << endl;
-        return 1;
-    }
-
-    // Fetching points from file
-    int pointId = 1;
-    vector<Point> all_points;
-    string line;
-
-    while (getline(infile, line))
-    {
-        Point point(pointId, line);
-        all_points.push_back(point);
-        pointId++;
-    }
-    
-    infile.close();
-    cout << "\nData fetched successfully!" << endl
-         << endl;
-
-    // Return if number of clusters > number of points
-    if ((int)all_points.size() < K)
-    {
-        cout << "Error: Number of clusters greater than number of points." << endl;
-        return 1;
-    }
-
-    // Running K-Means Clustering
-    int iters = 100;
-
-    KMeans kmeans(K, iters, output_dir);
-    kmeans.run(all_points);
-
-    return 0;
+int main() {
+	RBTree bst;
+	bst.insert(8);
+	bst.insert(18);
+	bst.insert(5);
+	bst.insert(15);
+	bst.insert(17);
+	bst.insert(25);
+	bst.insert(40);
+	bst.insert(80);
+	bst.deleteNode(25);
+	bst.prettyPrint();
+	return 0;
 }
