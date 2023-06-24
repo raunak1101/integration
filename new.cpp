@@ -1,223 +1,159 @@
-/* Snake Game using C++ 
-developed by TheKittyKat, 
-improved by Nazim Nazari 
-December 2017 */
-
-#include <iostream>
-#include <conio.h>
+// C++ program for Kruskal's algorithm to find Minimum
+// Spanning Tree of a given connected, undirected and
+// weighted graph
+#include<bits/stdc++.h>
 using namespace std;
 
-void run();
-void printMap();
-void initMap();
-void move(int dx, int dy);
-void update();
-void changeDirection(char key);
-void clearScreen();
-void generateFood();
+// Creating shortcut for an integer pair
+typedef pair<int, int> iPair;
 
-char getMapValue(int value);
+// Structure to represent a graph
+struct Graph
+{
+	int V, E;
+	vector< pair<int, iPair> > edges;
 
-// Map dimensions
-const int mapwidth = 20;
-const int mapheight = 20;
+	// Constructor
+	Graph(int V, int E)
+	{
+		this->V = V;
+		this->E = E;
+	}
 
-const int size = mapwidth * mapheight;
+	// Utility function to add an edge
+	void addEdge(int u, int v, int w)
+	{
+		edges.push_back({w, {u, v}});
+	}
 
-// The tile values for the map
-int map[size];
+	// Function to find MST using Kruskal's
+	// MST algorithm
+	int kruskalMST();
+};
 
-// Snake head details
-int headxpos;
-int headypos;
-int direction;
+// To represent Disjoint Sets
+struct DisjointSets
+{
+	int *parent, *rnk;
+	int n;
 
-// Amount of food the snake has (How long the body is)
-int food = 4;
+	// Constructor.
+	DisjointSets(int n)
+	{
+		// Allocate memory
+		this->n = n;
+		parent = new int[n+1];
+		rnk = new int[n+1];
 
-// Determine if game is running
-bool running;
+		// Initially, all vertices are in
+		// different sets and have rank 0.
+		for (int i = 0; i <= n; i++)
+		{
+			rnk[i] = 0;
 
+			//every element is parent of itself
+			parent[i] = i;
+		}
+	}
+
+	// Find the parent of a node 'u'
+	// Path Compression
+	int find(int u)
+	{
+		/* Make the parent of the nodes in the path
+		from u--> parent[u] point to parent[u] */
+		if (u != parent[u])
+			parent[u] = find(parent[u]);
+		return parent[u];
+	}
+
+	// Union by rank
+	void merge(int x, int y)
+	{
+		x = find(x), y = find(y);
+
+		/* Make tree with smaller height
+		a subtree of the other tree */
+		if (rnk[x] > rnk[y])
+			parent[y] = x;
+		else // If rnk[x] <= rnk[y]
+			parent[x] = y;
+
+		if (rnk[x] == rnk[y])
+			rnk[y]++;
+	}
+};
+
+/* Functions returns weight of the MST*/
+
+int Graph::kruskalMST()
+{
+	int mst_wt = 0; // Initialize result
+
+	// Sort edges in increasing order on basis of cost
+	sort(edges.begin(), edges.end());
+
+	// Create disjoint sets
+	DisjointSets ds(V);
+
+	// Iterate through all sorted edges
+	vector< pair<int, iPair> >::iterator it;
+	for (it=edges.begin(); it!=edges.end(); it++)
+	{
+		int u = it->second.first;
+		int v = it->second.second;
+
+		int set_u = ds.find(u);
+		int set_v = ds.find(v);
+
+		// Check if the selected edge is creating
+		// a cycle or not (Cycle is created if u
+		// and v belong to same set)
+		if (set_u != set_v)
+		{
+			// Current edge will be in the MST
+			// so print it
+			cout << u << " - " << v << endl;
+
+			// Update MST weight
+			mst_wt += it->first;
+
+			// Merge two sets
+			ds.merge(set_u, set_v);
+		}
+	}
+
+	return mst_wt;
+}
+
+// Driver program to test above functions
 int main()
 {
-    run();
-    return 0;
-}
+	/* Let us create above shown weighted
+	and undirected graph */
+	int V = 9, E = 14;
+	Graph g(V, E);
 
-// Main game function
-void run()
-{
-    // Initialize the map
-    initMap();
-    running = true;
-    while (running) {
-        // If a key is pressed
-        if (kbhit()) {
-            // Change to direction determined by key pressed
-            changeDirection(getch());
-        }
-        // Update the map
-        update();
+	// making above shown graph
+	g.addEdge(0, 1, 4);
+	g.addEdge(0, 7, 8);
+	g.addEdge(1, 2, 8);
+	g.addEdge(1, 7, 11);
+	g.addEdge(2, 3, 7);
+	g.addEdge(2, 8, 2);
+	g.addEdge(2, 5, 4);
+	g.addEdge(3, 4, 9);
+	g.addEdge(3, 5, 14);
+	g.addEdge(4, 5, 10);
+	g.addEdge(5, 6, 2);
+	g.addEdge(6, 7, 1);
+	g.addEdge(6, 8, 6);
+	g.addEdge(7, 8, 7);
 
-        // Clear the screen
-        clearScreen();
+	cout << "Edges of MST are \n";
+	int mst_wt = g.kruskalMST();
 
-        // Print the map
-        printMap();
+	cout << "\nWeight of MST is " << mst_wt;
 
-        // delay 0.4 seconds
-        _sleep(400);
-    }
-
-    // Game Text
-    cout << "\t\tGame Over!" << endl << "\t\tYour score is: " << food;
-
-    // Stop console from closing instantly
-    cin.ignore();
-}
-
-// Changes snake direction from input
-void changeDirection(char key) {
-    /*
-      W
-    A + D
-      S
-      1
-    4 + 2
-      3
-    */
-    switch (key) {
-    case 'w':
-        if (direction != 2) direction = 0;
-        break;
-    case 'd':
-        if (direction != 3) direction = 1;
-        break;
-    case 's':
-        if (direction != 4) direction = 2;
-        break;
-    case 'a':
-        if (direction != 5) direction = 3;
-        break;
-    }
-}
-
-// Moves snake head to new location
-void move(int dx, int dy) {
-    // determine new head position
-    int newx = headxpos + dx;
-    int newy = headypos + dy;
-
-    // Check if there is food at location
-    if (map[newx + newy * mapwidth] == -2) {
-        // Increase food value (body length)
-        food++;
-
-        // Generate new food on map
-        generateFood();
-    }
-
-    // Check location is free
-    else if (map[newx + newy * mapwidth] != 0) {
-        running = false;
-    }
-
-    // Move head to new location
-    headxpos = newx;
-    headypos = newy;
-    map[headxpos + headypos * mapwidth] = food + 1;
-
-}
-
-// Clears screen
-void clearScreen() {
-    // Clear the screen
-    system("cls");
-}
-
-// Generates new food on map
-void generateFood() {
-    int x = 0;
-    int y = 0;
-    do {
-        // Generate random x and y values within the map
-        x = rand() % (mapwidth - 2) + 1;
-        y = rand() % (mapheight - 2) + 1;
-
-        // If location is not free try again
-    } while (map[x + y * mapwidth] != 0);
-
-    // Place new food
-    map[x + y * mapwidth] = -2;
-}
-
-// Updates the map
-void update() {
-    // Move in direction indicated
-    switch (direction) {
-    case 0: move(-1, 0);
-        break;
-    case 1: move(0, 1);
-        break;
-    case 2: move(1, 0);
-        break;
-    case 3: move(0, -1);
-        break;
-    }
-
-    // Reduce snake values on map by 1
-    for (int i = 0; i < size; i++) {
-        if (map[i] > 0) map[i]--;
-    }
-}
-
-// Initializes map
-void initMap()
-{
-    // Places the initual head location in middle of map
-    headxpos = mapwidth / 2;
-    headypos = mapheight / 2;
-    map[headxpos + headypos * mapwidth] = 1;
-
-    // Places top and bottom walls 
-    for (int x = 0; x < mapwidth; ++x) {
-        map[x] = -1;
-        map[x + (mapheight - 1) * mapwidth] = -1;
-    }
-
-    // Places left and right walls
-    for (int y = 0; y < mapheight; y++) {
-        map[0 + y * mapwidth] = -1;
-        map[(mapwidth - 1) + y * mapwidth] = -1;
-    }
-
-    // Generates first food
-    generateFood();
-}
-
-// Prints the map to console
-void printMap()
-{
-    for (int x = 0; x < mapwidth; ++x) {
-        for (int y = 0; y < mapheight; ++y) {
-            // Prints the value at current x,y location
-            cout << getMapValue(map[x + y * mapwidth]);
-        }
-        // Ends the line for next x value
-        cout << endl;
-    }
-}
-
-// Returns graphical character for display from map value
-char getMapValue(int value)
-{
-    // Returns a part of snake body
-    if (value > 0) return 'o';
-
-    switch (value) {
-        // Return wall
-    case -1: return 'X';
-        // Return food
-    case -2: return 'O';
-    }
+	return 0;
 }
