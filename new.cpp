@@ -1,194 +1,223 @@
-// C++ program to insert a node in AVL tree
-#include<bits/stdc++.h>
+/* Snake Game using C++ 
+developed by TheKittyKat, 
+improved by Nazim Nazari 
+December 2017 */
+
+#include <iostream>
+#include <conio.h>
 using namespace std;
 
-// An AVL tree node
-class Node
-{
-	public:
-	int key;
-	Node *left;
-	Node *right;
-	int height;
-};
+void run();
+void printMap();
+void initMap();
+void move(int dx, int dy);
+void update();
+void changeDirection(char key);
+void clearScreen();
+void generateFood();
 
-// A utility function to get the
-// height of the tree
-int height(Node *N)
-{
-	if (N == NULL)
-		return 0;
-	return N->height;
-}
+char getMapValue(int value);
 
-// A utility function to get maximum
-// of two integers
-int max(int a, int b)
-{
-	return (a > b)? a : b;
-}
+// Map dimensions
+const int mapwidth = 20;
+const int mapheight = 20;
 
-/* Helper function that allocates a
-new node with the given key and
-NULL left and right pointers. */
-Node* newNode(int key)
-{
-	Node* node = new Node();
-	node->key = key;
-	node->left = NULL;
-	node->right = NULL;
-	node->height = 1; // new node is initially
-					// added at leaf
-	return(node);
-}
+const int size = mapwidth * mapheight;
 
-// A utility function to right
-// rotate subtree rooted with y
-// See the diagram given above.
-Node *rightRotate(Node *y)
-{
-	Node *x = y->left;
-	Node *T2 = x->right;
+// The tile values for the map
+int map[size];
 
-	// Perform rotation
-	x->right = y;
-	y->left = T2;
+// Snake head details
+int headxpos;
+int headypos;
+int direction;
 
-	// Update heights
-	y->height = max(height(y->left),
-					height(y->right)) + 1;
-	x->height = max(height(x->left),
-					height(x->right)) + 1;
+// Amount of food the snake has (How long the body is)
+int food = 4;
 
-	// Return new root
-	return x;
-}
+// Determine if game is running
+bool running;
 
-// A utility function to left
-// rotate subtree rooted with x
-// See the diagram given above.
-Node *leftRotate(Node *x)
-{
-	Node *y = x->right;
-	Node *T2 = y->left;
-
-	// Perform rotation
-	y->left = x;
-	x->right = T2;
-
-	// Update heights
-	x->height = max(height(x->left),
-					height(x->right)) + 1;
-	y->height = max(height(y->left),
-					height(y->right)) + 1;
-
-	// Return new root
-	return y;
-}
-
-// Get Balance factor of node N
-int getBalance(Node *N)
-{
-	if (N == NULL)
-		return 0;
-	return height(N->left) - height(N->right);
-}
-
-// Recursive function to insert a key
-// in the subtree rooted with node and
-// returns the new root of the subtree.
-Node* insert(Node* node, int key)
-{
-	/* 1. Perform the normal BST insertion */
-	if (node == NULL)
-		return(newNode(key));
-
-	if (key < node->key)
-		node->left = insert(node->left, key);
-	else if (key > node->key)
-		node->right = insert(node->right, key);
-	else // Equal keys are not allowed in BST
-		return node;
-
-	/* 2. Update height of this ancestor node */
-	node->height = 1 + max(height(node->left),
-						height(node->right));
-
-	/* 3. Get the balance factor of this ancestor
-		node to check whether this node became
-		unbalanced */
-	int balance = getBalance(node);
-
-	// If this node becomes unbalanced, then
-	// there are 4 cases
-
-	// Left Left Case
-	if (balance > 1 && key < node->left->key)
-		return rightRotate(node);
-
-	// Right Right Case
-	if (balance < -1 && key > node->right->key)
-		return leftRotate(node);
-
-	// Left Right Case
-	if (balance > 1 && key > node->left->key)
-	{
-		node->left = leftRotate(node->left);
-		return rightRotate(node);
-	}
-
-	// Right Left Case
-	if (balance < -1 && key < node->right->key)
-	{
-		node->right = rightRotate(node->right);
-		return leftRotate(node);
-	}
-
-	/* return the (unchanged) node pointer */
-	return node;
-}
-
-// A utility function to print preorder
-// traversal of the tree.
-// The function also prints height
-// of every node
-void preOrder(Node *root)
-{
-	if(root != NULL)
-	{
-		cout << root->key << " ";
-		preOrder(root->left);
-		preOrder(root->right);
-	}
-}
-
-// Driver Code
 int main()
 {
-	Node *root = NULL;
-	
-	/* Constructing tree given in
-	the above figure */
-	root = insert(root, 10);
-	root = insert(root, 20);
-	root = insert(root, 30);
-	root = insert(root, 40);
-	root = insert(root, 50);
-	root = insert(root, 25);
-	
-	/* The constructed AVL Tree would be
-				30
-			/ \
-			20 40
-			/ \ \
-		10 25 50
-	*/
-	cout << "Preorder traversal of the "
-			"constructed AVL tree is \n";
-	preOrder(root);
-	
-	return 0;
+    run();
+    return 0;
 }
 
-// This code is contributed by
-// rathbhupendra
+// Main game function
+void run()
+{
+    // Initialize the map
+    initMap();
+    running = true;
+    while (running) {
+        // If a key is pressed
+        if (kbhit()) {
+            // Change to direction determined by key pressed
+            changeDirection(getch());
+        }
+        // Update the map
+        update();
+
+        // Clear the screen
+        clearScreen();
+
+        // Print the map
+        printMap();
+
+        // delay 0.4 seconds
+        _sleep(400);
+    }
+
+    // Game Text
+    cout << "\t\tGame Over!" << endl << "\t\tYour score is: " << food;
+
+    // Stop console from closing instantly
+    cin.ignore();
+}
+
+// Changes snake direction from input
+void changeDirection(char key) {
+    /*
+      W
+    A + D
+      S
+      1
+    4 + 2
+      3
+    */
+    switch (key) {
+    case 'w':
+        if (direction != 2) direction = 0;
+        break;
+    case 'd':
+        if (direction != 3) direction = 1;
+        break;
+    case 's':
+        if (direction != 4) direction = 2;
+        break;
+    case 'a':
+        if (direction != 5) direction = 3;
+        break;
+    }
+}
+
+// Moves snake head to new location
+void move(int dx, int dy) {
+    // determine new head position
+    int newx = headxpos + dx;
+    int newy = headypos + dy;
+
+    // Check if there is food at location
+    if (map[newx + newy * mapwidth] == -2) {
+        // Increase food value (body length)
+        food++;
+
+        // Generate new food on map
+        generateFood();
+    }
+
+    // Check location is free
+    else if (map[newx + newy * mapwidth] != 0) {
+        running = false;
+    }
+
+    // Move head to new location
+    headxpos = newx;
+    headypos = newy;
+    map[headxpos + headypos * mapwidth] = food + 1;
+
+}
+
+// Clears screen
+void clearScreen() {
+    // Clear the screen
+    system("cls");
+}
+
+// Generates new food on map
+void generateFood() {
+    int x = 0;
+    int y = 0;
+    do {
+        // Generate random x and y values within the map
+        x = rand() % (mapwidth - 2) + 1;
+        y = rand() % (mapheight - 2) + 1;
+
+        // If location is not free try again
+    } while (map[x + y * mapwidth] != 0);
+
+    // Place new food
+    map[x + y * mapwidth] = -2;
+}
+
+// Updates the map
+void update() {
+    // Move in direction indicated
+    switch (direction) {
+    case 0: move(-1, 0);
+        break;
+    case 1: move(0, 1);
+        break;
+    case 2: move(1, 0);
+        break;
+    case 3: move(0, -1);
+        break;
+    }
+
+    // Reduce snake values on map by 1
+    for (int i = 0; i < size; i++) {
+        if (map[i] > 0) map[i]--;
+    }
+}
+
+// Initializes map
+void initMap()
+{
+    // Places the initual head location in middle of map
+    headxpos = mapwidth / 2;
+    headypos = mapheight / 2;
+    map[headxpos + headypos * mapwidth] = 1;
+
+    // Places top and bottom walls 
+    for (int x = 0; x < mapwidth; ++x) {
+        map[x] = -1;
+        map[x + (mapheight - 1) * mapwidth] = -1;
+    }
+
+    // Places left and right walls
+    for (int y = 0; y < mapheight; y++) {
+        map[0 + y * mapwidth] = -1;
+        map[(mapwidth - 1) + y * mapwidth] = -1;
+    }
+
+    // Generates first food
+    generateFood();
+}
+
+// Prints the map to console
+void printMap()
+{
+    for (int x = 0; x < mapwidth; ++x) {
+        for (int y = 0; y < mapheight; ++y) {
+            // Prints the value at current x,y location
+            cout << getMapValue(map[x + y * mapwidth]);
+        }
+        // Ends the line for next x value
+        cout << endl;
+    }
+}
+
+// Returns graphical character for display from map value
+char getMapValue(int value)
+{
+    // Returns a part of snake body
+    if (value > 0) return 'o';
+
+    switch (value) {
+        // Return wall
+    case -1: return 'X';
+        // Return food
+    case -2: return 'O';
+    }
+}
