@@ -1,96 +1,132 @@
-// C++ Program for Floyd Warshall Algorithm
+// A C++ program to print topological
+// sorting of a graph using indegrees.
 #include <bits/stdc++.h>
 using namespace std;
 
-// Number of vertices in the graph
-#define V 4
+// Class to represent a graph
+class Graph {
+	// No. of vertices'
+	int V;
 
-/* Define Infinite as a large enough
-value.This value will be used for
-vertices not connected to each other */
-#define INF 99999
+	// Pointer to an array containing
+	// adjacency listsList
+	list<int>* adj;
 
-// A function to print the solution matrix
-void printSolution(int dist[][V]);
+public:
+	// Constructor
+	Graph(int V);
 
-// Solves the all-pairs shortest path
-// problem using Floyd Warshall algorithm
-void floydWarshall(int dist[][V])
+	// Function to add an edge to graph
+	void addEdge(int u, int v);
+
+	// prints a Topological Sort of
+	// the complete graph
+	void topologicalSort();
+};
+
+Graph::Graph(int V)
 {
-
-	int i, j, k;
-
-	/* Add all vertices one by one to
-	the set of intermediate vertices.
-	---> Before start of an iteration,
-	we have shortest distances between all
-	pairs of vertices such that the
-	shortest distances consider only the
-	vertices in set {0, 1, 2, .. k-1} as
-	intermediate vertices.
-	----> After the end of an iteration,
-	vertex no. k is added to the set of
-	intermediate vertices and the set becomes {0, 1, 2, ..
-	k} */
-	for (k = 0; k < V; k++) {
-		// Pick all vertices as source one by one
-		for (i = 0; i < V; i++) {
-			// Pick all vertices as destination for the
-			// above picked source
-			for (j = 0; j < V; j++) {
-				// If vertex k is on the shortest path from
-				// i to j, then update the value of
-				// dist[i][j]
-				if (dist[i][j] > (dist[i][k] + dist[k][j])
-					&& (dist[k][j] != INF
-						&& dist[i][k] != INF))
-					dist[i][j] = dist[i][k] + dist[k][j];
-			}
-		}
-	}
-
-	// Print the shortest distance matrix
-	printSolution(dist);
+	this->V = V;
+	adj = new list<int>[V];
 }
 
-/* A utility function to print solution */
-void printSolution(int dist[][V])
+void Graph::addEdge(int u, int v)
 {
-	cout << "The following matrix shows the shortest "
-			"distances"
-			" between every pair of vertices \n";
-	for (int i = 0; i < V; i++) {
-		for (int j = 0; j < V; j++) {
-			if (dist[i][j] == INF)
-				cout << "INF"
-					<< " ";
-			else
-				cout << dist[i][j] << " ";
-		}
-		cout << endl;
-	}
+	adj[u].push_back(v);
 }
 
-// Driver's code
+// The function to do
+// Topological Sort.
+void Graph::topologicalSort()
+{
+	// Create a vector to store
+	// indegrees of all
+	// vertices. Initialize all
+	// indegrees as 0.
+	vector<int> in_degree(V, 0);
+
+	// Traverse adjacency lists
+	// to fill indegrees of
+	// vertices. This step
+	// takes O(V+E) time
+	for (int u = 0; u < V; u++) {
+		list<int>::iterator itr;
+		for (itr = adj[u].begin();
+			itr != adj[u].end(); itr++)
+			in_degree[*itr]++;
+	}
+
+	// Create an queue and enqueue
+	// all vertices with indegree 0
+	queue<int> q;
+	for (int i = 0; i < V; i++)
+		if (in_degree[i] == 0)
+			q.push(i);
+
+	// Initialize count of visited vertices
+	int cnt = 0;
+
+	// Create a vector to store
+	// result (A topological
+	// ordering of the vertices)
+	vector<int> top_order;
+
+	// One by one dequeue vertices
+	// from queue and enqueue
+	// adjacents if indegree of
+	// adjacent becomes 0
+	while (!q.empty()) {
+		// Extract front of queue
+		// (or perform dequeue)
+		// and add it to topological order
+		int u = q.front();
+		q.pop();
+		top_order.push_back(u);
+
+		// Iterate through all its
+		// neighbouring nodes
+		// of dequeued node u and
+		// decrease their in-degree
+		// by 1
+		list<int>::iterator itr;
+		for (itr = adj[u].begin();
+			itr != adj[u].end(); itr++)
+
+			// If in-degree becomes zero,
+			// add it to queue
+			if (--in_degree[*itr] == 0)
+				q.push(*itr);
+
+		cnt++;
+	}
+
+	// Check if there was a cycle
+	if (cnt != V) {
+		cout << "There exists a cycle in the graph\n";
+		return;
+	}
+
+	// Print topological order
+	for (int i = 0; i < top_order.size(); i++)
+		cout << top_order[i] << " ";
+	cout << endl;
+}
+
+// Driver program to test above functions
 int main()
 {
-	/* Let us create the following weighted graph
-			10
-	(0)------->(3)
-		|	 /|\
-	5 |	 |
-		|	 | 1
-	\|/	 |
-	(1)------->(2)
-			3	 */
-	int graph[V][V] = { { 0, 5, INF, 10 },
-						{ INF, 0, 3, INF },
-						{ INF, INF, 0, 1 },
-						{ INF, INF, INF, 0 } };
+	// Create a graph given in the
+	// above diagram
+	Graph g(6);
+	g.addEdge(5, 2);
+	g.addEdge(5, 0);
+	g.addEdge(4, 0);
+	g.addEdge(4, 1);
+	g.addEdge(2, 3);
+	g.addEdge(3, 1);
 
-	// Function call
-	floydWarshall(graph);
+	cout << "Following is a Topological Sort of\n";
+	g.topologicalSort();
+
 	return 0;
 }
-
-// This code is contributed by Mythri J L
