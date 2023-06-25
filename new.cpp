@@ -1,159 +1,134 @@
-// C++ program for Kruskal's algorithm to find Minimum
-// Spanning Tree of a given connected, undirected and
-// weighted graph
-#include<bits/stdc++.h>
-using namespace std;
+// A C++ program for getting minimum product
+// spanning tree The program is for adjacency matrix
+// representation of the graph
+#include <bits/stdc++.h>
 
-// Creating shortcut for an integer pair
-typedef pair<int, int> iPair;
+// Number of vertices in the graph
+#define V 5
 
-// Structure to represent a graph
-struct Graph
+// A utility function to find the vertex with minimum
+// key value, from the set of vertices not yet included
+// in MST
+int minKey(int key[], bool mstSet[])
 {
-	int V, E;
-	vector< pair<int, iPair> > edges;
+	// Initialize min value
+	int min = INT_MAX, min_index;
 
-	// Constructor
-	Graph(int V, int E)
-	{
-		this->V = V;
-		this->E = E;
-	}
+	for (int v = 0; v < V; v++)
+		if (mstSet[v] == false && key[v] < min)
+			min = key[v], min_index = v;
 
-	// Utility function to add an edge
-	void addEdge(int u, int v, int w)
-	{
-		edges.push_back({w, {u, v}});
-	}
-
-	// Function to find MST using Kruskal's
-	// MST algorithm
-	int kruskalMST();
-};
-
-// To represent Disjoint Sets
-struct DisjointSets
-{
-	int *parent, *rnk;
-	int n;
-
-	// Constructor.
-	DisjointSets(int n)
-	{
-		// Allocate memory
-		this->n = n;
-		parent = new int[n+1];
-		rnk = new int[n+1];
-
-		// Initially, all vertices are in
-		// different sets and have rank 0.
-		for (int i = 0; i <= n; i++)
-		{
-			rnk[i] = 0;
-
-			//every element is parent of itself
-			parent[i] = i;
-		}
-	}
-
-	// Find the parent of a node 'u'
-	// Path Compression
-	int find(int u)
-	{
-		/* Make the parent of the nodes in the path
-		from u--> parent[u] point to parent[u] */
-		if (u != parent[u])
-			parent[u] = find(parent[u]);
-		return parent[u];
-	}
-
-	// Union by rank
-	void merge(int x, int y)
-	{
-		x = find(x), y = find(y);
-
-		/* Make tree with smaller height
-		a subtree of the other tree */
-		if (rnk[x] > rnk[y])
-			parent[y] = x;
-		else // If rnk[x] <= rnk[y]
-			parent[x] = y;
-
-		if (rnk[x] == rnk[y])
-			rnk[y]++;
-	}
-};
-
-/* Functions returns weight of the MST*/
-
-int Graph::kruskalMST()
-{
-	int mst_wt = 0; // Initialize result
-
-	// Sort edges in increasing order on basis of cost
-	sort(edges.begin(), edges.end());
-
-	// Create disjoint sets
-	DisjointSets ds(V);
-
-	// Iterate through all sorted edges
-	vector< pair<int, iPair> >::iterator it;
-	for (it=edges.begin(); it!=edges.end(); it++)
-	{
-		int u = it->second.first;
-		int v = it->second.second;
-
-		int set_u = ds.find(u);
-		int set_v = ds.find(v);
-
-		// Check if the selected edge is creating
-		// a cycle or not (Cycle is created if u
-		// and v belong to same set)
-		if (set_u != set_v)
-		{
-			// Current edge will be in the MST
-			// so print it
-			cout << u << " - " << v << endl;
-
-			// Update MST weight
-			mst_wt += it->first;
-
-			// Merge two sets
-			ds.merge(set_u, set_v);
-		}
-	}
-
-	return mst_wt;
+	return min_index;
 }
 
-// Driver program to test above functions
+// A utility function to print the constructed MST
+// stored in parent[] and print Minimum Obtainable
+// product
+int printMST(int parent[], int n, int graph[V][V])
+{
+	printf("Edge Weight\n");
+	int minProduct = 1;
+	for (int i = 1; i < V; i++) {
+		printf("%d - %d %d \n",
+			parent[i], i, graph[i][parent[i]]);
+
+		minProduct *= graph[i][parent[i]];
+	}
+	printf("Minimum Obtainable product is %d\n",
+		minProduct);
+}
+
+// Function to construct and print MST for a graph
+// represented using adjacency matrix representation
+// inputGraph is sent for printing actual edges and
+// logGraph is sent for actual MST operations
+void primMST(int inputGraph[V][V], double logGraph[V][V])
+{
+	int parent[V]; // Array to store constructed MST
+	int key[V]; // Key values used to pick minimum
+	// weight edge in cut
+	bool mstSet[V]; // To represent set of vertices not
+	// yet included in MST
+
+	// Initialize all keys as INFINITE
+	for (int i = 0; i < V; i++)
+		key[i] = INT_MAX, mstSet[i] = false;
+
+	// Always include first 1st vertex in MST.
+	key[0] = 0; // Make key 0 so that this vertex is
+	// picked as first vertex
+	parent[0] = -1; // First node is always root of MST
+
+	// The MST will have V vertices
+	for (int count = 0; count < V - 1; count++) {
+		// Pick the minimum key vertex from the set of
+		// vertices not yet included in MST
+		int u = minKey(key, mstSet);
+
+		// Add the picked vertex to the MST Set
+		mstSet[u] = true;
+
+		// Update key value and parent index of the
+		// adjacent vertices of the picked vertex.
+		// Consider only those vertices which are not yet
+		// included in MST
+		for (int v = 0; v < V; v++)
+
+			// logGraph[u][v] is non zero only for
+			// adjacent vertices of m mstSet[v] is false
+			// for vertices not yet included in MST
+			// Update the key only if logGraph[u][v] is
+			// smaller than key[v]
+			if (logGraph[u][v] > 0 && mstSet[v] == false && logGraph[u][v] < key[v])
+
+				parent[v] = u, key[v] = logGraph[u][v];
+	}
+
+	// print the constructed MST
+	printMST(parent, V, inputGraph);
+}
+
+// Method to get minimum product spanning tree
+void minimumProductMST(int graph[V][V])
+{
+	double logGraph[V][V];
+
+	// Constructing logGraph from original graph
+	for (int i = 0; i < V; i++) {
+		for (int j = 0; j < V; j++) {
+			if (graph[i][j] > 0)
+				logGraph[i][j] = log(graph[i][j]);
+			else
+				logGraph[i][j] = 0;
+		}
+	}
+
+	// Applying standard Prim's MST algorithm on
+	// Log graph.
+	primMST(graph, logGraph);
+}
+
+// driver program to test above function
 int main()
 {
-	/* Let us create above shown weighted
-	and undirected graph */
-	int V = 9, E = 14;
-	Graph g(V, E);
+	/* Let us create the following graph
+		2 3
+	(0)--(1)--(2)
+		| / \ |
+	6| 8/ \5 |7
+		| /	 \ |
+	(3)-------(4)
+			9		 */
+	int graph[V][V] = {
+		{ 0, 2, 0, 6, 0 },
+		{ 2, 0, 3, 8, 5 },
+		{ 0, 3, 0, 0, 7 },
+		{ 6, 8, 0, 0, 9 },
+		{ 0, 5, 7, 9, 0 },
+	};
 
-	// making above shown graph
-	g.addEdge(0, 1, 4);
-	g.addEdge(0, 7, 8);
-	g.addEdge(1, 2, 8);
-	g.addEdge(1, 7, 11);
-	g.addEdge(2, 3, 7);
-	g.addEdge(2, 8, 2);
-	g.addEdge(2, 5, 4);
-	g.addEdge(3, 4, 9);
-	g.addEdge(3, 5, 14);
-	g.addEdge(4, 5, 10);
-	g.addEdge(5, 6, 2);
-	g.addEdge(6, 7, 1);
-	g.addEdge(6, 8, 6);
-	g.addEdge(7, 8, 7);
-
-	cout << "Edges of MST are \n";
-	int mst_wt = g.kruskalMST();
-
-	cout << "\nWeight of MST is " << mst_wt;
+	// Print the solution
+	minimumProductMST(graph);
 
 	return 0;
 }
