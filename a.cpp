@@ -1,90 +1,136 @@
-// A C++ program for Dijkstra's single source shortest path algorithm.
-// The program is for adjacency matrix representation of the graph
+// A C++ program to find bridges in a given undirected graph
+#include<bits/stdc++.h>
+using namespace std;
 
-#include <limits.h>
-#include <stdio.h>
-
-// Number of vertices in the graph
-#define V 9
-
-// A utility function to find the vertex with minimum distance value, from
-// the set of vertices not yet included in shortest path tree
-int minDistance(int dist[], bool sptSet[])
+// A class that represents an undirected graph
+class Graph
 {
-	// Initialize min value
-	int min = INT_MAX, min_index;
+	int V; // No. of vertices
+	list<int> *adj; // A dynamic array of adjacency lists
+	void bridgeUtil(int u, vector<bool>& visited, vector<int>& disc,
+								vector<int>& low, int parent);
+public:
+	Graph(int V); // Constructor
+	void addEdge(int v, int w); // to add an edge to graph
+	void bridge(); // prints all bridges
+};
 
-	for (int v = 0; v < V; v++)
-		if (sptSet[v] == false && dist[v] <= min)
-			min = dist[v], min_index = v;
-
-	return min_index;
+Graph::Graph(int V)
+{
+	this->V = V;
+	adj = new list<int>[V];
 }
 
-// A utility function to print the constructed distance array
-int printSolution(int dist[], int n)
+void Graph::addEdge(int v, int w)
 {
-	printf("Vertex Distance from Source\n");
-	for (int i = 0; i < V; i++)
-		printf("%d \t\t %d\n", i, dist[i]);
+	adj[v].push_back(w);
+	adj[w].push_back(v); // Note: the graph is undirected
 }
 
-// Function that implements Dijkstra's single source shortest path algorithm
-// for a graph represented using adjacency matrix representation
-void dijkstra(int graph[V][V], int src)
+// A recursive function that finds and prints bridges using
+// DFS traversal
+// u --> The vertex to be visited next
+// visited[] --> keeps track of visited vertices
+// disc[] --> Stores discovery times of visited vertices
+// parent[] --> Stores parent vertices in DFS tree
+void Graph::bridgeUtil(int u, vector<bool>& visited, vector<int>& disc,
+								vector<int>& low, int parent)
 {
-	int dist[V]; // The output array. dist[i] will hold the shortest
-	// distance from src to i
+	// A static variable is used for simplicity, we can
+	// avoid use of static variable by passing a pointer.
+	static int time = 0;
 
-	bool sptSet[V]; // sptSet[i] will be true if vertex i is included in shortest
-	// path tree or shortest distance from src to i is finalized
+	// Mark the current node as visited
+	visited[u] = true;
 
-	// Initialize all distances as INFINITE and stpSet[] as false
-	for (int i = 0; i < V; i++)
-		dist[i] = INT_MAX, sptSet[i] = false;
+	// Initialize discovery time and low value
+	disc[u] = low[u] = ++time;
 
-	// Distance of source vertex from itself is always 0
-	dist[src] = 0;
+	// Go through all vertices adjacent to this
+	list<int>::iterator i;
+	for (i = adj[u].begin(); i != adj[u].end(); ++i)
+	{
+		int v = *i; // v is current adjacent of u
+		
+		// 1. If v is parent
+		if(v==parent)
+			continue;
+	
+		//2. If v is visited
+		if(visited[v]){
+		low[u] = min(low[u], disc[v]);
+		}
+	
+		//3. If v is not visited
+		else{
+		parent = u;
+		bridgeUtil(v, visited, disc, low, parent);
 
-	// Find shortest path for all vertices
-	for (int count = 0; count < V - 1; count++) {
-		// Pick the minimum distance vertex from the set of vertices not
-		// yet processed. u is always equal to src in the first iteration.
-		int u = minDistance(dist, sptSet);
-
-		// Mark the picked vertex as processed
-		sptSet[u] = true;
-
-		// Update dist value of the adjacent vertices of the picked vertex.
-		for (int v = 0; v < V; v++)
-
-			// Update dist[v] only if is not in sptSet, there is an edge from
-			// u to v, and total weight of path from src to v through u is
-			// smaller than current value of dist[v]
-			if (!sptSet[v] && graph[u][v] && dist[u] != INT_MAX
-				&& dist[u] + graph[u][v] < dist[v])
-				dist[v] = dist[u] + graph[u][v];
+		// update the low of u as it's quite possible
+		// a connection exists from v's descendants to u
+		low[u] = min(low[u], low[v]);
+		
+		// if the lowest possible time to reach vertex v
+		// is greater than discovery time of u it means
+		// that v can be only be reached by vertex above v
+		// so if that edge is removed v can't be reached so it's a bridge
+		if (low[v] > disc[u])
+			cout << u <<" " << v << endl;
+		
+		}
 	}
-
-	// print the constructed distance array
-	printSolution(dist, V);
 }
 
-// driver program to test above function
+// DFS based function to find all bridges. It uses recursive
+// function bridgeUtil()
+void Graph::bridge()
+{
+	// Mark all the vertices as not visited disc and low as -1
+	vector<bool> visited (V,false);
+	vector<int> disc (V,-1);
+	vector<int> low (V,-1);
+	
+	// Initially there is no parent so let it be -1
+	int parent = -1;
+
+	// Call the recursive helper function to find Bridges
+	// in DFS tree rooted with vertex 'i'
+	for (int i = 0; i < V; i++)
+		if (visited[i] == false)
+			bridgeUtil(i, visited, disc, low, parent);
+}
+
+// Driver program to test above function
 int main()
 {
-	/* Let us create the example graph discussed above */
-	int graph[V][V] = { { 0, 4, 0, 0, 0, 0, 0, 8, 0 },
-						{ 4, 0, 8, 0, 0, 0, 0, 11, 0 },
-						{ 0, 8, 0, 7, 0, 4, 0, 0, 2 },
-						{ 0, 0, 7, 0, 9, 14, 0, 0, 0 },
-						{ 0, 0, 0, 9, 0, 10, 0, 0, 0 },
-						{ 0, 0, 4, 14, 10, 0, 2, 0, 0 },
-						{ 0, 0, 0, 0, 0, 2, 0, 1, 6 },
-						{ 8, 11, 0, 0, 0, 0, 1, 0, 7 },
-						{ 0, 0, 2, 0, 0, 0, 6, 7, 0 } };
+	// Create graphs given in above diagrams
+	cout << "\nBridges in first graph \n";
+	Graph g1(5);
+	g1.addEdge(1, 0);
+	g1.addEdge(0, 2);
+	g1.addEdge(2, 1);
+	g1.addEdge(0, 3);
+	g1.addEdge(3, 4);
+	g1.bridge();
 
-	dijkstra(graph, 0);
+	cout << "\nBridges in second graph \n";
+	Graph g2(4);
+	g2.addEdge(0, 1);
+	g2.addEdge(1, 2);
+	g2.addEdge(2, 3);
+	g2.bridge();
+
+	cout << "\nBridges in third graph \n";
+	Graph g3(7);
+	g3.addEdge(0, 1);
+	g3.addEdge(1, 2);
+	g3.addEdge(2, 0);
+	g3.addEdge(1, 3);
+	g3.addEdge(1, 4);
+	g3.addEdge(1, 6);
+	g3.addEdge(3, 5);
+	g3.addEdge(4, 5);
+	g3.bridge();
 
 	return 0;
 }
